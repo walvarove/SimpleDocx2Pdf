@@ -45,17 +45,21 @@ def convert_docx_to_pdf():
         # Check API token
         api_token = request.headers.get('X-API-Token')
         if not api_token or api_token != app.config['API_TOKEN']:
+            logger.warning(f"Invalid API token: {api_token}")
             return jsonify(error='Invalid or missing API token'), 401
             
         if 'file' not in request.files:
+            logger.warning("No file provided in request")
             return jsonify(error='No file provided'), 400
 
         file = request.files['file']
 
         if file.filename == '':
+            logger.warning("Empty filename provided")
             return jsonify(error='No file selected'), 400
 
         if not file.filename.endswith('.docx'):
+            logger.warning(f"Invalid file extension: {file.filename}")
             return jsonify(error='Only .docx files are supported'), 400
 
         # Save the uploaded file
@@ -72,15 +76,15 @@ def convert_docx_to_pdf():
         pypandoc.convert_file(docx_path, 'pdf', outputfile=pdf_path)
         logger.info(f"Conversion successful, PDF saved to {pdf_path}")
         
-        # Create a ZIP file containing both DOCX and PDF
+        # Create a ZIP file containing both DOCX and PDF with maximum compression
         zip_path = os.path.join(app.config['UPLOAD_FOLDER'], f'{unique_id}.zip')
-        with zipfile.ZipFile(zip_path, 'w') as zipf:
+        with zipfile.ZipFile(zip_path, 'w', compression=zipfile.ZIP_DEFLATED, compresslevel=9) as zipf:
             # Add the original DOCX file with the original filename
             zipf.write(docx_path, os.path.basename(file.filename))
             # Add the PDF file with the original filename but .pdf extension
             pdf_filename = os.path.splitext(file.filename)[0] + '.pdf'
             zipf.write(pdf_path, pdf_filename)
-        logger.info(f"Created ZIP file at {zip_path}")
+        logger.info(f"Created ZIP file at {zip_path} with maximum compression")
         
         # Send the ZIP file back to the client
         return send_file(zip_path, as_attachment=True, download_name=f'{os.path.splitext(file.filename)[0]}.zip')
@@ -111,18 +115,26 @@ def process_template_to_pdf():
     zip_path = None
     
     try:
+        # Log request details for debugging
+        logger.info(f"Received template request with headers: {dict(request.headers)}")
+        logger.info(f"Request form data keys: {list(request.form.keys())}")
+        logger.info(f"Request files keys: {list(request.files.keys())}")
+        
         # Check API token
         api_token = request.headers.get('X-API-Token')
         if not api_token or api_token != app.config['API_TOKEN']:
+            logger.warning(f"Invalid API token: {api_token}")
             return jsonify(error='Invalid or missing API token'), 401
         
         # Check if the request has the required parts
         if 'template' not in request.files:
+            logger.warning("No template file provided in request")
             return jsonify(error='No template file provided'), 400
         
         # Get the template file
         template_file = request.files['template']
         if template_file.filename == '' or not template_file.filename.endswith('.docx'):
+            logger.warning(f"Invalid template file: {template_file.filename}")
             return jsonify(error='Invalid template file. Must be a .docx file'), 400
         
         # Get the data and htmlData from the request
@@ -131,19 +143,29 @@ def process_template_to_pdf():
         
         if 'data' in request.form:
             try:
-                data = json.loads(request.form['data'])
+                data_str = request.form['data']
+                logger.info(f"Raw data string: {data_str[:100]}...")  # Log first 100 chars
+                data = json.loads(data_str)
                 logger.info(f"Parsed data: {data.keys()}")
             except json.JSONDecodeError as e:
                 logger.error(f"JSON decode error in data field: {str(e)}")
+                logger.error(f"Invalid JSON data: {request.form['data'][:100]}...")  # Log first 100 chars
                 return jsonify(error=f'Invalid JSON in data field: {str(e)}'), 400
+        else:
+            logger.warning("No data field provided in request")
         
         if 'htmlData' in request.form:
             try:
-                html_data = json.loads(request.form['htmlData'])
+                html_data_str = request.form['htmlData']
+                logger.info(f"Raw htmlData string: {html_data_str[:100]}...")  # Log first 100 chars
+                html_data = json.loads(html_data_str)
                 logger.info(f"Parsed htmlData: {html_data.keys()}")
             except json.JSONDecodeError as e:
                 logger.error(f"JSON decode error in htmlData field: {str(e)}")
+                logger.error(f"Invalid JSON htmlData: {request.form['htmlData'][:100]}...")  # Log first 100 chars
                 return jsonify(error=f'Invalid JSON in htmlData field: {str(e)}'), 400
+        else:
+            logger.warning("No htmlData field provided in request")
         
         # Get the output filename (optional)
         output_filename = request.form.get('filename', os.path.splitext(template_file.filename)[0])
@@ -198,15 +220,15 @@ def process_template_to_pdf():
             logger.error(f"Pandoc conversion error: {str(pandoc_error)}")
             return jsonify(error=f"PDF conversion failed: {str(pandoc_error)}"), 500
         
-        # Create a ZIP file containing both DOCX and PDF
+        # Create a ZIP file containing both DOCX and PDF with maximum compression
         try:
-            with zipfile.ZipFile(zip_path, 'w') as zipf:
+            with zipfile.ZipFile(zip_path, 'w', compression=zipfile.ZIP_DEFLATED, compresslevel=9) as zipf:
                 # Add the processed DOCX file with the provided filename
                 zipf.write(output_docx_path, output_filename)
                 # Add the PDF file with the provided filename but .pdf extension
                 pdf_filename = os.path.splitext(output_filename)[0] + '.pdf'
                 zipf.write(pdf_path, pdf_filename)
-            logger.info(f"Created ZIP file at {zip_path}")
+            logger.info(f"Created ZIP file at {zip_path} with maximum compression")
         except Exception as zip_error:
             logger.error(f"Error creating ZIP file: {str(zip_error)}")
             return jsonify(error=f"Failed to create ZIP file: {str(zip_error)}"), 500
