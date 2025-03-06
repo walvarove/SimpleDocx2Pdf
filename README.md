@@ -8,6 +8,7 @@ A simple REST API service that converts DOCX files to PDF using LibreOffice.
 - Docker and Docker Compose support for easy deployment
 - Configurable file size limits and temporary directory
 - Clean-up of temporary files after conversion
+- Ready for deployment to Koyeb
 
 ## Requirements
 
@@ -64,6 +65,32 @@ The service can be configured using environment variables in the `docker-compose
 - `MAX_FILE_SIZE`: Maximum file size in bytes (default: 10MB)
 - `TEMP_DIR`: Directory for temporary files (default: /tmp/docx2pdf)
 
+## Deployment
+
+### Deploying to Koyeb
+
+1. Create a Koyeb account at [koyeb.com](https://koyeb.com)
+
+2. Install the Koyeb CLI:
+   ```
+   curl -fsSL https://cli.koyeb.com/install.sh | sh
+   ```
+
+3. Login to Koyeb:
+   ```
+   koyeb login
+   ```
+
+4. Deploy the application:
+   ```
+   koyeb app init docx2pdf --git github.com/walvarove/docx2pdf --git-branch main
+   ```
+
+5. Or deploy using the koyeb.yaml configuration:
+   ```
+   koyeb app create --name docx2pdf --file koyeb.yaml
+   ```
+
 ## Development
 
 ### Prerequisites
@@ -75,7 +102,7 @@ The service can be configured using environment variables in the `docker-compose
 
 1. Install dependencies:
    ```
-   go mod download
+   go mod tidy
    ```
 
 2. Build the application:

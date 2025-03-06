@@ -1,0 +1,28 @@
+name: docx2pdf
+services:
+  - name: api
+    type: web
+    ports:
+      - port: 8080
+        protocol: http
+    routes:
+      - path: /
+        port: 8080
+    docker:
+      image: registry.koyeb.com/docx2pdf/api
+      build:
+        context: .
+        dockerfile: Dockerfile
+    env:
+      - name: PORT
+        value: "8080"
+      - name: MAX_FILE_SIZE
+        value: "10485760"
+      - name: TEMP_DIR
+        value: "/tmp/docx2pdf"
+    regions:
+      - fra
+    instance_type: nano
+    scaling:
+      min: 1
+      max: 1 
