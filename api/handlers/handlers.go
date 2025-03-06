@@ -35,6 +35,16 @@ func createConvertHandler(converter converter.Converter, maxFileSize int64) gin.
 	return func(c *gin.Context) {
 		// Get the file from the request
 		file, err := c.FormFile("file")
+
+		apiToken := c.GetHeader("X-API-Token")
+
+		if apiToken != os.Getenv("API_TOKEN") {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"error": "Invalid API token",
+			})
+			return
+		}
+
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"error": "No file provided or invalid file",
