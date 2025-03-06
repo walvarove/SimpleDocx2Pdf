@@ -1,13 +1,25 @@
-FROM node:18-alpine
+FROM python:3.11-slim
 
-RUN apk update && apk add --no-cache libreoffice
-
+# Set the working directory
 WORKDIR /app
 
-COPY package*.json ./
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    libreoffice \
+    fonts-liberation \
+    wkhtmltopdf \
+    pandoc \
+    && rm -rf /var/lib/apt/lists/*
 
-RUN npm install
+# Copy the requirements file and install dependencies
+COPY requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
 
+# Copy the application code
 COPY . .
 
-CMD ["node", "server.js"]
+# Expose the API port
+EXPOSE 8080
+
+# Run the application
+CMD ["python", "app.py"]
