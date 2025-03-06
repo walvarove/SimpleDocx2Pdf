@@ -89,9 +89,6 @@ def convert_docx_to_pdf():
         # Send the ZIP file back to the client
         return send_file(zip_path, as_attachment=True, download_name=f'{os.path.splitext(file.filename)[0]}.zip')
     
-    except pypandoc.exceptions.PandocError as e:
-        logger.error(f"Pandoc conversion error: {str(e)}")
-        return jsonify(error=f"PDF conversion failed: {str(e)}"), 500
     except Exception as e:
         logger.error(f"Unexpected error: {str(e)}")
         logger.error(traceback.format_exc())
@@ -216,8 +213,8 @@ def process_template_to_pdf():
             logger.info(f"Converting {output_docx_path} to PDF")
             pypandoc.convert_file(output_docx_path, 'pdf', outputfile=pdf_path)
             logger.info(f"Conversion successful, PDF saved to {pdf_path}")
-        except pypandoc.exceptions.PandocError as pandoc_error:
-            logger.error(f"Pandoc conversion error: {str(pandoc_error)}")
+        except Exception as pandoc_error:
+            logger.error(f"PDF conversion error: {str(pandoc_error)}")
             return jsonify(error=f"PDF conversion failed: {str(pandoc_error)}"), 500
         
         # Create a ZIP file containing both DOCX and PDF with maximum compression
