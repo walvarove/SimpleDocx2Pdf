@@ -13,6 +13,7 @@ service:
     build:
       context: .
       dockerfile: Dockerfile
+    command: ./docx2pdf
   env:
     - name: PORT
       value: "8080"

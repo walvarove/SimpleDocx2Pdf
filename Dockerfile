@@ -17,12 +17,12 @@ RUN go mod tidy
 COPY . .
 
 # Build the application
-RUN CGO_ENABLED=0 GOOS=linux go build -o /docx2pdf ./cmd/server
+RUN CGO_ENABLED=0 GOOS=linux go build -o docx2pdf ./cmd/server
 
 # Final stage
 FROM alpine:3.18
 
-WORKDIR /
+WORKDIR /app
 
 # Install LibreOffice and required dependencies
 RUN apk add --no-cache libreoffice libreoffice-writer msttcorefonts-installer fontconfig && \
@@ -30,7 +30,7 @@ RUN apk add --no-cache libreoffice libreoffice-writer msttcorefonts-installer fo
     fc-cache -f
 
 # Copy the binary from the builder stage
-COPY --from=builder /docx2pdf /docx2pdf
+COPY --from=builder /app/docx2pdf /app/docx2pdf
 
 # Create directory for temporary files
 RUN mkdir -p /tmp/docx2pdf
@@ -39,4 +39,4 @@ RUN mkdir -p /tmp/docx2pdf
 EXPOSE 8080
 
 # Run the application
-CMD ["/docx2pdf"] 
+CMD ["./docx2pdf"] 

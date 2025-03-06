@@ -1,1 +1,1 @@
-web: /docx2pdf 
+web: ./docx2pdf 
