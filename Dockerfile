@@ -10,8 +10,8 @@ RUN apk add --no-cache libreoffice libreoffice-writer msttcorefonts-installer fo
 # Copy go.mod and go.sum files
 COPY go.mod go.sum* ./
 
-# Download dependencies
-RUN go mod download
+# Download and tidy dependencies
+RUN go mod tidy
 
 # Copy the source code
 COPY . .
