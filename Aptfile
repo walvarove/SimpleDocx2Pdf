@@ -2,4 +2,12 @@ libreoffice
 libreoffice-writer
 fonts-liberation
 wkhtmltopdf
-pandoc 
+pandoc
+texlive-latex-base
+texlive-fonts-recommended
+texlive-fonts-extra
+texlive-latex-recommended
+texlive-xetex
+texlive-latex-extra
+texlive-base
+lmodern 
