@@ -1,52 +1,13 @@
-FROM golang:1.21-alpine AS builder
+FROM node:18-alpine
+
+RUN apk update && apk add --no-cache libreoffice
 
 WORKDIR /app
 
-# Install LibreOffice and required dependencies
-RUN apk add --no-cache libreoffice libreoffice-writer msttcorefonts-installer fontconfig && \
-    update-ms-fonts && \
-    fc-cache -f
+COPY package*.json ./
 
-# Copy go.mod and go.sum files
-COPY go.mod go.sum* ./
+RUN npm install
 
-# Download and tidy dependencies
-RUN go mod tidy
-
-# Copy the source code
 COPY . .
 
-# Build the application
-RUN CGO_ENABLED=0 GOOS=linux go build -o docx2pdf ./cmd/server
-
-# Final stage
-FROM alpine:3.18
-
-# Install LibreOffice and required dependencies
-RUN apk add --no-cache libreoffice libreoffice-writer msttcorefonts-installer fontconfig && \
-    update-ms-fonts && \
-    fc-cache -f
-
-# Create directory for temporary files
-RUN mkdir -p /tmp/docx2pdf
-
-# Copy the binary from the builder stage to multiple locations
-COPY --from=builder /app/docx2pdf /app/docx2pdf
-COPY --from=builder /app/docx2pdf /docx2pdf
-COPY --from=builder /app/docx2pdf /usr/local/bin/docx2pdf
-
-# Make sure the binary is executable
-RUN chmod +x /app/docx2pdf /docx2pdf /usr/local/bin/docx2pdf
-
-# Copy entrypoint script
-COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
-
-# Expose the API port
-EXPOSE 8080
-
-# Set working directory
-WORKDIR /app
-
-# Run the application using the entrypoint script
-CMD ["/entrypoint.sh"] 
+CMD ["node", "server.js"]

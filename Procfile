@@ -1,1 +1,0 @@
-web: bin/docx2pdf 

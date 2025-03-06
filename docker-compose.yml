@@ -1,16 +1,13 @@
-version: '3.8'
-
+version: "3.8"
 services:
-  api:
+  app:
     build:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "8080:8080"
-    volumes:
-      - ./tmp:/tmp/docx2pdf
+      - "3000:3000"
     environment:
-      - PORT=8080
-      - MAX_FILE_SIZE=10485760  # 10MB
-      - TEMP_DIR=/tmp/docx2pdf
-    restart: unless-stopped 
+      API_TOKEN: ${API_TOKEN}
+      PORT: 3000
+    volumes:
+      - ./data:/app/data
