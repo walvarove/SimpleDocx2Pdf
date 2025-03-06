@@ -1,1 +1,1 @@
-web: ./docx2pdf 
+web: bin/docx2pdf 

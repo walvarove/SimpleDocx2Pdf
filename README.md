@@ -81,14 +81,14 @@ The service can be configured using environment variables in the `docker-compose
    koyeb login
    ```
 
-4. Deploy the application:
-   ```
-   koyeb app init docx2pdf --git github.com/walvarove/docx2pdf --git-branch main
-   ```
-
-5. Or deploy using the koyeb.yaml configuration:
+4. Deploy the application using the koyeb.yaml configuration:
    ```
    koyeb app create --name docx2pdf --file koyeb.yaml
+   ```
+
+5. Or deploy directly from GitHub:
+   ```
+   koyeb app init docx2pdf --git github.com/walvarove/docx2pdf --git-branch main --buildpack heroku/buildpacks:20
    ```
 
 ## Development
@@ -107,12 +107,12 @@ The service can be configured using environment variables in the `docker-compose
 
 2. Build the application:
    ```
-   go build -o docx2pdf ./cmd/server
+   go build -o bin/docx2pdf ./cmd/server
    ```
 
 3. Run the application:
    ```
-   ./docx2pdf
+   ./bin/docx2pdf
    ```
 
 ## Example Usage

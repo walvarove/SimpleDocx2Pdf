@@ -4,16 +4,14 @@ services:
     type: web
     ports:
       - port: 8080
-        protocol: http
     routes:
       - path: /
         port: 8080
-    docker:
-      image: registry.koyeb.com/docx2pdf/api
-      build:
-        context: .
-        dockerfile: Dockerfile
-      command: /entrypoint.sh
+    git:
+      repository: github.com/walvarove/docx2pdf
+      branch: main
+    buildpacks:
+      builder: heroku/buildpacks:20
     env:
       - name: PORT
         value: "8080"

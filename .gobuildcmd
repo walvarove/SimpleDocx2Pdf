@@ -1,0 +1,1 @@
+go build -o bin/docx2pdf ./cmd/server 
