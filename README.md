@@ -11,6 +11,7 @@ A simple REST API service that converts DOCX files to PDF using Python and Libre
 - Configurable file size limits and temporary directory
 - Clean-up of temporary files after conversion
 - API token authentication
+- Ready for deployment to Koyeb
 
 ## Requirements
 
@@ -102,6 +103,32 @@ The service can be configured using environment variables in the `docker-compose
 - `PORT`: The port the server listens on (default: 8080)
 - `MAX_CONTENT_LENGTH`: Maximum file size in bytes (default: 10MB)
 - `API_TOKEN`: Authentication token for API requests (default: Bkbxl2376APMv99y77HmGWk2teBODjXO)
+
+## Deployment
+
+### Deploying to Koyeb
+
+1. Create a Koyeb account at [koyeb.com](https://koyeb.com)
+
+2. Install the Koyeb CLI:
+   ```
+   curl -fsSL https://cli.koyeb.com/install.sh | sh
+   ```
+
+3. Login to Koyeb:
+   ```
+   koyeb login
+   ```
+
+4. Deploy the application using the koyeb.yaml configuration:
+   ```
+   koyeb app create --name docx2pdf --file koyeb.yaml
+   ```
+
+5. Or deploy directly from GitHub:
+   ```
+   koyeb app init docx2pdf --git github.com/walvarove/docx2pdf --git-branch main --buildpack heroku/buildpacks:20
+   ```
 
 ## Development
 

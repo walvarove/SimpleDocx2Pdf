@@ -1,0 +1,27 @@
+name: docx2pdf
+services:
+  - name: api
+    type: web
+    ports:
+      - port: 8080
+    routes:
+      - path: /
+        port: 8080
+    git:
+      repository: github.com/walvarove/docx2pdf
+      branch: main
+    buildpacks:
+      builder: heroku/buildpacks:20
+    env:
+      - name: PORT
+        value: "8080"
+      - name: MAX_CONTENT_LENGTH
+        value: "10485760"
+      - name: API_TOKEN
+        value: "Bkbxl2376APMv99y77HmGWk2teBODjXO"
+    regions:
+      - fra
+    instance_type: nano
+    scaling:
+      min: 1
+      max: 1 
