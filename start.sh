@@ -1,15 +1,15 @@
 #!/bin/sh
 set -e
 
-# Print current directory and list files for debugging
+# This script is used by Koyeb to start the application
+
+# Print environment for debugging
+echo "Environment:"
+env
+
+# Print current directory
 echo "Current directory: $(pwd)"
 ls -la
-echo "Root directory:"
-ls -la /
-echo "App directory:"
-ls -la /app
-echo "Usr/local/bin directory:"
-ls -la /usr/local/bin
 
 # Try to find and run the application
 if [ -f "./docx2pdf" ]; then
@@ -26,5 +26,16 @@ elif [ -f "/usr/local/bin/docx2pdf" ]; then
   exec /usr/local/bin/docx2pdf
 else
   echo "ERROR: Could not find docx2pdf executable"
+  # Try to build the application if source code is available
+  if [ -d "./cmd/server" ]; then
+    echo "Found source code, attempting to build"
+    go build -o docx2pdf ./cmd/server
+    if [ -f "./docx2pdf" ]; then
+      echo "Successfully built executable"
+      exec ./docx2pdf
+    else
+      echo "Failed to build executable"
+    fi
+  fi
   exit 1
 fi 

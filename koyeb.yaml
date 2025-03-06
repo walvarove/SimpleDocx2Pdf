@@ -13,7 +13,7 @@ services:
       build:
         context: .
         dockerfile: Dockerfile
-      command: ./docx2pdf
+      command: /entrypoint.sh
     env:
       - name: PORT
         value: "8080"

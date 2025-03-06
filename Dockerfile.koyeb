@@ -17,15 +17,16 @@ RUN go mod tidy
 COPY . .
 
 # Build the application
-RUN CGO_ENABLED=0 GOOS=linux go build -o docx2pdf ./cmd/server
+RUN CGO_ENABLED=0 GOOS=linux go build -o /app/docx2pdf ./cmd/server
 
-# Final stage
-FROM alpine:3.18
+# Final stage - using Debian for better compatibility with Koyeb
+FROM debian:bullseye-slim
 
 # Install LibreOffice and required dependencies
-RUN apk add --no-cache libreoffice libreoffice-writer msttcorefonts-installer fontconfig && \
-    update-ms-fonts && \
-    fc-cache -f
+RUN apt-get update && apt-get install -y \
+    libreoffice \
+    fonts-liberation \
+    && rm -rf /var/lib/apt/lists/*
 
 # Create directory for temporary files
 RUN mkdir -p /tmp/docx2pdf
@@ -38,9 +39,10 @@ COPY --from=builder /app/docx2pdf /usr/local/bin/docx2pdf
 # Make sure the binary is executable
 RUN chmod +x /app/docx2pdf /docx2pdf /usr/local/bin/docx2pdf
 
-# Copy entrypoint script
+# Copy scripts
 COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+COPY start.sh /start.sh
+RUN chmod +x /entrypoint.sh /start.sh
 
 # Expose the API port
 EXPOSE 8080
