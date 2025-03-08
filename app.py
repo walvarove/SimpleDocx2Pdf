@@ -8,12 +8,17 @@ import zipfile
 import logging
 from bs4 import BeautifulSoup
 from docx import Document
+from flask_cors import CORS  # Import CORS
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Import our docx_to_html implementation
+from extractors.docx_to_html import docx_to_html
+
 app = Flask(__name__)
+CORS(app)  # Enable CORS for all routes
 
 # Configuration
 app.config['UPLOAD_FOLDER'] = '/tmp/docx2pdf'
@@ -22,40 +27,6 @@ app.config['API_TOKEN'] = os.environ.get('API_TOKEN', 'Bkbxl2376APMv99y77HmGWk2t
 
 # Ensure the upload folder exists
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-
-def docx_to_html(docx_file, html_file):
-    """Convert DOCX to HTML using Pandoc with metadata"""
-    try:
-        subprocess.run([
-            "pandoc",
-            docx_file,
-            "-f", "docx",
-            "-t", "html5",
-            "--metadata", "title= ",  # Empty title to prevent auto-generation
-            "--standalone",
-            "--embed-resources",
-            "--extract-media", ".",  # Extract media files if any
-            "-o", html_file
-        ], check=True, capture_output=True, text=True)
-
-        # Read the generated HTML
-        with open(html_file, 'r', encoding='utf-8') as f:
-            content = f.read()
-
-        # Remove or replace the auto-generated title
-        content = re.sub(r'<title>.*?</title>', '<title></title>', content)
-
-        # Write back the modified HTML
-        with open(html_file, 'w', encoding='utf-8') as f:
-            f.write(content)
-
-    except subprocess.CalledProcessError as e:
-        logger.error(f"Pandoc conversion error: {e}")
-        logger.error(f"Command output: {e.stdout}\n{e.stderr}")
-        raise
-    except Exception as e:
-        logger.error(f"Error in docx_to_html: {e}")
-        raise
 
 def html_to_docx(html_file, output_docx, reference_doc=None):
     """Convert HTML back to DOCX using Pandoc"""
@@ -277,38 +248,105 @@ def process_template_to_pdf():
                 except Exception as e:
                     logger.error(f"Error cleaning up {file_path}: {str(e)}")
 
-@app.route('/api/v1/html_to_docx', methods=['POST'])
-def process_html_to_docx():
+@app.route('/api/v1/docx_to_html', methods=['POST'])
+def process_docx_to_html():
     if request.headers.get('X-API-Token') != app.config['API_TOKEN']:
         return jsonify(error='Invalid or missing API token'), 401
+    
+    if 'template' not in request.files:
+        return jsonify(error='No template file provided'), 400
+    
+    template_file = request.files['template']
+    if not template_file.filename.endswith('.docx'):
+        return jsonify(error='Invalid template file. Must be a .docx file'), 400
+    
+    unique_id = str(uuid.uuid4())
+    template_path = os.path.join(app.config['UPLOAD_FOLDER'], f'{unique_id}_template.docx')
+    temp_html = os.path.join(app.config['UPLOAD_FOLDER'], f'{unique_id}_temp.html')
+    
+    try:
+        # Save the uploaded file
+        template_file.save(template_path)
+        logger.info(f"Saved uploaded file to {template_path}")
+        
+        # Convert DOCX to HTML using our implementation
+        html_content = docx_to_html(template_path, temp_html, embed_images=True)
+        logger.info(f"Successfully converted DOCX to HTML")
+        
+        return jsonify(html=html_content)
+    
+    except Exception as e:
+        logger.error(f"Error in docx_to_html: {str(e)}")
+        return jsonify(error=str(e)), 500
+    
+    finally:
+        # Clean up temporary files
+        for file_path in [template_path, temp_html]:
+            if os.path.exists(file_path):
+                try:
+                    os.remove(file_path)
+                except Exception as e:
+                    logger.error(f"Error cleaning up {file_path}: {str(e)}")
 
+@app.route('/api/v1/html_to_pdf', methods=['POST'])
+def process_html_to_pdf():
+    if request.headers.get('X-API-Token') != app.config['API_TOKEN']:
+        return jsonify(error='Invalid or missing API token'), 401
+    
     if 'html' not in request.form:
         return jsonify(error='No HTML content provided'), 400
     
     html_content = request.form['html']
     unique_id = str(uuid.uuid4())
     temp_html = os.path.join(app.config['UPLOAD_FOLDER'], f'{unique_id}_temp.html')
-    output_docx = os.path.join(app.config['UPLOAD_FOLDER'], f'{unique_id}_output.docx')
+    output_dir = os.path.dirname(temp_html)
     
     try:
-        with open(temp_html, 'w', encoding='utf-8') as file:
-            file.write(html_content)
+        # Save the HTML content
+        with open(temp_html, 'w', encoding='utf-8') as f:
+            f.write(html_content)
         
-        html_to_docx(temp_html, output_docx)
+        # Convert HTML to PDF using LibreOffice
+        cmd = [
+            'libreoffice',
+            '--headless',
+            '--convert-to', 'pdf',
+            '--outdir', output_dir,
+            temp_html
+        ]
+        process = subprocess.run(cmd, capture_output=True, text=True)
         
-        return send_file(output_docx, as_attachment=True, download_name=f'{unique_id}_output.docx')
+        if process.returncode == 0:
+            # LibreOffice creates the PDF with the same base name as the input file
+            base_name = os.path.splitext(os.path.basename(temp_html))[0]
+            pdf_path = os.path.join(output_dir, f"{base_name}.pdf")
+            
+            # Check if the PDF was actually created
+            if os.path.exists(pdf_path):
+                response = send_file(pdf_path, as_attachment=True, download_name=f'{unique_id}_output.pdf')
+                
+                # Clean up after sending the file
+                if os.path.exists(temp_html):
+                    os.remove(temp_html)
+                if os.path.exists(pdf_path):
+                    os.remove(pdf_path)
+                    
+                return response
+            else:
+                logger.error(f"PDF file was not created at expected path: {pdf_path}")
+                return jsonify(error="PDF file was not created"), 500
+        else:
+            logger.error(f"LibreOffice conversion failed: {process.stderr}")
+            return jsonify(error="PDF conversion failed: " + process.stderr), 500
     
     except Exception as e:
-        logger.error(f"Error: {str(e)}")
-        return jsonify(error=str(e)), 500
-    
-    finally:
+        logger.error(f"Error in html_to_pdf: {str(e)}")
+        # Clean up any temporary files
         if os.path.exists(temp_html):
-            try:
-                os.remove(temp_html)
-            except Exception as e:
-                logger.error(f"Error cleaning up {temp_html}: {str(e)}")
+            os.remove(temp_html)
+        return jsonify(error=str(e)), 500
 
+                    
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8080))
-    app.run(host='0.0.0.0', port=port) 
+    app.run(host='0.0.0.0', port=port)

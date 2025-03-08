@@ -1,32 +1,41 @@
-FROM python:3.11-slim
-
-# Set the working directory
-WORKDIR /app
+FROM python:3.9-slim
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
     libreoffice \
-    fonts-liberation \
-    wkhtmltopdf \
+    libreoffice-writer \
+    libxml2-dev \
+    libxslt-dev \
+    gcc \
+    python3-dev \
     wget \
     && rm -rf /var/lib/apt/lists/*
 
-# Download and install the latest Pandoc version
-RUN PANDOC_VERSION=$(wget -qO- https://api.github.com/repos/jgm/pandoc/releases/latest | grep '"tag_name":' | cut -d '"' -f 4) && \
-    wget https://github.com/jgm/pandoc/releases/download/$PANDOC_VERSION/pandoc-$PANDOC_VERSION-linux-amd64.tar.gz && \
-    tar -xvzf pandoc-$PANDOC_VERSION-linux-amd64.tar.gz && \
-    cp -r pandoc-$PANDOC_VERSION/bin/* /usr/local/bin/ && \
-    rm -rf pandoc-$PANDOC_VERSION pandoc-$PANDOC_VERSION-linux-amd64.tar.gz
+# Install Pandoc based on architecture
+RUN ARCH=$(dpkg --print-architecture) && \
+    if [ "$ARCH" = "arm64" ]; then \
+        wget https://github.com/jgm/pandoc/releases/download/2.19.2/pandoc-2.19.2-1-arm64.deb \
+        && dpkg -i pandoc-2.19.2-1-arm64.deb \
+        && rm pandoc-2.19.2-1-arm64.deb; \
+    else \
+        wget https://github.com/jgm/pandoc/releases/download/2.19.2/pandoc-2.19.2-1-amd64.deb \
+        && dpkg -i pandoc-2.19.2-1-amd64.deb \
+        && rm pandoc-2.19.2-1-amd64.deb; \
+    fi
 
-# Copy the requirements file and install dependencies
-COPY requirements.txt ./
+WORKDIR /app
+
+# Copy requirements first for better caching
+COPY requirements.txt .
+
+# Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the application code
+# Copy the rest of the application
 COPY . .
 
-# Expose the API port
+# Expose the port the app runs on
 EXPOSE 8080
 
-# Run the application
+# Command to run the application
 CMD ["python", "app.py"]
